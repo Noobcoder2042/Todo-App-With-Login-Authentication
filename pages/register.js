@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FcGoogle } from "react-icons/fc";
-import { useState, useEffect } from "react";
 import { auth } from "../firebase/firebase";
 import {
   createUserWithEmailAndPassword,
@@ -19,8 +18,11 @@ const RegisterForm = () => {
   const [username, setUsername] = useState(null);
   const [email, setEmail] = useState(null);
   const [password, setPassword] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
   const { authUser, isLoading, setAuthUser } = useAuth();
   const router = useRouter();
+
   useEffect(() => {
     if (!isLoading && authUser) {
       router.push("/");
@@ -29,6 +31,11 @@ const RegisterForm = () => {
 
   const singupHandler = async () => {
     if (!email || !password || !username) return;
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      setShowPopup(true);
+      return;
+    }
     try {
       const { user } = await createUserWithEmailAndPassword(
         auth,
@@ -44,7 +51,15 @@ const RegisterForm = () => {
         username,
       });
     } catch (error) {
-      console.error("An error occured", error);
+      const errorCode = error.code;
+      if (errorCode === "auth/email-already-in-use") {
+        setErrorMessage(
+          "Email is already registered. Please log in with the same email to use the app."
+        );
+      } else {
+        setErrorMessage("An error occurred. Please try again later.");
+      }
+      setShowPopup(true);
     }
   };
 
@@ -61,7 +76,7 @@ const RegisterForm = () => {
         <div className="p-8 w-[600px]">
           <h1 className="text-6xl font-semibold">Sign Up</h1>
           <p className="mt-6 ml-1">
-            Already have an account ?{" "}
+            Already have an account?{" "}
             <Link
               href="/login"
               className="underline hover:text-blue-400 cursor-pointer"
@@ -125,6 +140,20 @@ const RegisterForm = () => {
           backgroundImage: "url('/login-banner.jpg')",
         }}
       ></div>
+
+      {showPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow">
+            <p className="text-red-500">{errorMessage}</p>
+            <button
+              className="mt-4 bg-black text-white py-2 px-4 rounded"
+              onClick={() => setShowPopup(false)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
