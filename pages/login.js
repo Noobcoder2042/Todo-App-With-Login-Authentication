@@ -13,10 +13,13 @@ import Link from "next/link.js";
 
 const provider = new GoogleAuthProvider();
 const LoginForm = () => {
-  const [email, setEmail] = useState(null);
-  const [password, setPassword] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
   const { authUser, isLoading } = useAuth();
   const router = useRouter();
+
   useEffect(() => {
     if (!isLoading && authUser) {
       router.push("/");
@@ -24,13 +27,30 @@ const LoginForm = () => {
   }, [authUser, isLoading]);
 
   const loginHandler = async () => {
-    if (!email || !password) return;
+    if (!email || !password) {
+      setErrorMessage("Please enter both email and password.");
+      setShowPopup(true);
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      setShowPopup(true);
+      return;
+    }
 
     try {
       const user = await signInWithEmailAndPassword(auth, email, password);
       console.log(user);
     } catch (error) {
       console.error("Error To Login", error);
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password"
+      ) {
+        setErrorMessage("Invalid email or password.");
+        setShowPopup(true);
+      }
     }
   };
 
@@ -42,6 +62,7 @@ const LoginForm = () => {
       console.error("Error To Login With Google", error);
     }
   };
+
   return isLoading || (!isLoading && authUser) ? (
     <Loader />
   ) : (
@@ -102,6 +123,20 @@ const LoginForm = () => {
           backgroundImage: "url('/login-banner.jpg')",
         }}
       ></div>
+
+      {showPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow">
+            <p className="text-red-500">{errorMessage}</p>
+            <button
+              className="mt-4 bg-black text-white py-2 px-4 rounded"
+              onClick={() => setShowPopup(false)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
